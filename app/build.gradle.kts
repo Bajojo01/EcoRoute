@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -11,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.ecoroute"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
@@ -58,5 +59,10 @@ dependencies {
 
     // Para sa mga icons (history, more, atbp.)
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.2.1"))
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.ktor:ktor-client-android:3.2.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
 }

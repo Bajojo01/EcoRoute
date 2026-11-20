@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ecoroute.ui.theme.AuthBackground
 import com.example.ecoroute.ui.theme.AuthGreen
 import com.example.ecoroute.ui.theme.LogoPlaceholder
@@ -39,7 +40,8 @@ import com.example.ecoroute.ui.theme.LogoPlaceholder
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,   // tumatakbo kapag tama ang login
-    onSignUpClick: () -> Unit     // tumatakbo kapag pinindot ang "Sign up"
+    onSignUpClick: () -> Unit,     // tumatakbo kapag pinindot ang "Sign up"
+    viewModel: AuthViewModel = viewModel()
 ) {
     // hidden ang tinype ng user
     var email by remember { mutableStateOf("") }
@@ -82,10 +84,9 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             AuthTextField(
-                label = "Email",
+                label = "Username or Email",
                 value = email,
-                onValueChange = { email = it },
-                keyboardType = KeyboardType.Email
+                onValueChange = { email = it }
             )
             Spacer(modifier = Modifier.height(12.dp))
             AuthTextField(
@@ -122,13 +123,11 @@ fun LoginScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            GreenButton(text = "Log in") {
-                // (PLACEHOLFER) basta may laman ang email at password, tama na.
-                // Papalitan pa to ng totoong check (Firebase).
+            GreenButton(text = if (viewModel.isLoading) "Logging in..." else "Log in") {
                 if (email.isBlank() || password.isBlank()) {
                     showError = true
-                } else {
-                    onLoginSuccess()
+                } else if (!viewModel.isLoading) {
+                    viewModel.logIn(email.trim(), password) { onLoginSuccess() }
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -142,8 +141,12 @@ fun LoginScreen(
     }
 
     // lalabas yung popup kapag showError = true
-    if (showError) {
-        AuthErrorDialog(title = "Log in failed") { showError = false }
+    val serverError = viewModel.errorMessage
+    if (showError || serverError != null) {
+        AuthErrorDialog(title = serverError ?: "Log in failed") {
+            showError = false
+            viewModel.clearError()
+        }
     }
 }
 
@@ -152,9 +155,11 @@ fun LoginScreen(
 fun SignUpScreen(
     onBackClick: () -> Unit,        // arrow sa taas
     onSignUpSuccess: () -> Unit,    // running kapag tama ang sign up
-    onLogInClick: () -> Unit        // "Log in" sa baba
+    onLogInClick: () -> Unit,        // "Log in" sa baba
+    viewModel: AuthViewModel = viewModel()
 ) {
-    var fullName by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -205,13 +210,20 @@ fun SignUpScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            AuthTextField(label = "Full Name", value = fullName, onValueChange = { fullName = it })
+            AuthTextField(label = "Username", value = username, onValueChange = { username = it })
+            Spacer(modifier = Modifier.height(12.dp))
             Spacer(modifier = Modifier.height(12.dp))
             AuthTextField(
                 label = "Email",
                 value = email,
                 onValueChange = { email = it },
                 keyboardType = KeyboardType.Email
+            )
+            AuthTextField(
+                label = "Phone number",
+                value = phoneNumber,
+                onValueChange = { phoneNumber = it },
+                keyboardType = KeyboardType.Phone
             )
             Spacer(modifier = Modifier.height(12.dp))
             AuthTextField(
@@ -245,14 +257,16 @@ fun SignUpScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            GreenButton(text = "Sign up") {
-                // Mali kung may blangko o hindi pareho yung password
-                val hasBlank = fullName.isBlank() || email.isBlank() ||
-                        password.isBlank() || confirmPassword.isBlank()
-                if (hasBlank || password != confirmPassword) {
+            GreenButton(text = if (viewModel.isLoading) "Signing up..." else "Sign up") {
+                val hasBlank = username.isBlank() || email.isBlank() ||
+                        phoneNumber.isBlank() || password.isBlank() || confirmPassword.isBlank()
+                // supabase needs at least 6 characters by default
+                if (hasBlank || password != confirmPassword || password.length < 6) {
                     showError = true
-                } else {
-                    onSignUpSuccess()
+                } else if (!viewModel.isLoading) {
+                    viewModel.signUp(
+                        username.trim(), email.trim(), password, phoneNumber.trim()
+                    ) { onSignUpSuccess() }
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -265,7 +279,11 @@ fun SignUpScreen(
         }
     }
 
-    if (showError) {
-        AuthErrorDialog(title = "Sign up failed") { showError = false }
+    val serverError = viewModel.errorMessage
+    if (showError || serverError != null) {
+        AuthErrorDialog(title = serverError ?: "Sign up failed") {
+            showError = false
+            viewModel.clearError()
+        }
     }
 }
